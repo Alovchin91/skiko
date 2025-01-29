@@ -43,7 +43,7 @@ case $SKIA_TARGET in
     ;;
   "windows")
     SKIKO_TARGET_FLAGS="-Pskiko.awt.enabled=true"
-    if [[ $(uname -m) == 'arm64' ]]; then
+    if [[ $(uname -s) == *'ARM64' ]]; then
       skikoMachines=("arm64")
     else
       skikoMachines=("x64")
@@ -77,7 +77,7 @@ SCRIPT_DIR="$(pwd)"
 
 git clone https://github.com/JetBrains/skia-pack.git || echo "skia-pack exists. You can remove it or update by hands with git pull"
 cd skia-pack
-[ -d "skia" ] && echo "skip cript/checkout.py, because directory skia-pack/skia already exists"
+[ -d "skia" ] && echo "skip script/checkout.py, because directory skia-pack/skia already exists"
 [ ! -d "skia" ] && python3 script/checkout.py --version "$SKIA_VERSION"
 for skikoMachine in ${skikoMachines[@]}; do
   python3 script/build.py --target "$SKIA_TARGET" --machine "$skikoMachine" --build-type "$skikoBuildType"
@@ -87,4 +87,6 @@ cd "$SCRIPT_DIR"
 
 rm -rf build/classes/kotlin/* # We need to drop old cache. We can do it with ./gradlew clean as well, but it tooks longer time to redownload dependencies dir.
 
-./gradlew publishToMavenLocal $SKIKO_TARGET_FLAGS -Pskia.dir="$(pwd)/skia-pack/skia" -Pskiko.debug=$SKIA_DEBUG_MODE
+for skikoMachine in ${skikoMachines[@]}; do
+  ./gradlew publishToMavenLocal $SKIKO_TARGET_FLAGS -Pskia.dir="${SCRIPT_DIR}/../../skia-pack/skia" -Pskiko.debug=$SKIA_DEBUG_MODE -Pskiko.arch="$skikoMachine"
+done
