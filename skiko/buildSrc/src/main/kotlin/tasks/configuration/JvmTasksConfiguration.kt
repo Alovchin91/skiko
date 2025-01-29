@@ -95,16 +95,17 @@ fun SkikoProjectContext.createCompileJvmBindingsTask(
             )
         }
         OS.Windows -> {
-            compiler.set(windowsSdkPaths.compiler.absolutePath)
             includeHeadersNonRecursive(windowsSdkPaths.includeDirs)
             includeHeadersNonRecursive(jdkHome.resolve("include/win32"))
+            val targetArgs = if (targetArch == Arch.Arm64) arrayOf("--target=arm64-windows") else arrayOf()
             osFlags = arrayOf(
                 "/nologo",
                 *buildType.msvcCompilerFlags,
                 "/utf-8",
                 "/GR-", // no-RTTI.
                 "/FS", // Due to an error when building in Teamcity. https://docs.microsoft.com/en-us/cpp/build/reference/fs-force-synchronous-pdb-writes
-                // LATER. Ange rendering arguments:
+                *targetArgs,
+                // LATER. Angle rendering arguments:
                 // "-I$skiaDir/third_party/externals/angle2/include",
                 // "-I$skiaDir/src/gpu",
                 // "-DSK_ANGLE",
@@ -287,7 +288,6 @@ fun SkikoProjectContext.createLinkJvmBindings(
             )
         }
         OS.Windows -> {
-            linker.set(windowsSdkPaths.linker.absolutePath)
             libDirs.set(windowsSdkPaths.libDirs)
             osFlags = mutableListOf<String>().apply {
                 addAll(buildType.msvcLinkerFlags)
@@ -298,16 +298,6 @@ fun SkikoProjectContext.createLinkJvmBindings(
                         "/ignore:4217"
                     )
                 )
-                // workaround for VS Build Tools 2022 (17.2+) change
-                // https://developercommunity.visualstudio.com/t/-imp-std-init-once-complete-unresolved-external-sy/1684365#T-N10041864
-                if (windowsSdkPaths.toolchainVersion >= VersionNumber.parse("14.32")) {
-                    addAll(
-                        arrayOf(
-                            "/ALTERNATENAME:__imp___std_init_once_begin_initialize=__imp_InitOnceBeginInitialize",
-                            "/ALTERNATENAME:__imp___std_init_once_complete=__imp_InitOnceComplete"
-                        )
-                    )
-                }
                 addAll(
                     arrayOf(
                         "/NOLOGO",
