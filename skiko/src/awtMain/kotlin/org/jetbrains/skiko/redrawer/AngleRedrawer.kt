@@ -34,7 +34,7 @@ internal class AngleRedrawer(
             draw()
             if (properties.isVsyncEnabled) {
                 withContext(dispatcherToBlockOn) {
-                    dwmFlush()
+                    waitForVerticalBlankEvent(device)
                 }
             }
         }
@@ -76,7 +76,7 @@ internal class AngleRedrawer(
             update(System.nanoTime())
             drawAndSwap()
             if (SkikoProperties.windowsWaitForVsyncOnRedrawImmediately) {
-                dwmFlush()
+                waitForVerticalBlankEvent(device)
             }
         }
     }
@@ -110,7 +110,7 @@ private external fun makeCurrent(device: Long)
 private external fun makeAngleContext(device: Long): Long
 private external fun makeAngleRenderTarget(device: Long, width: Int, height: Int): Long
 private external fun finishFrame(device: Long)
-private external fun dwmFlush()
+private external fun waitForVerticalBlankEvent(device: Long)
 private external fun disposeDevice(device: Long)
 
 @Suppress("unused")
