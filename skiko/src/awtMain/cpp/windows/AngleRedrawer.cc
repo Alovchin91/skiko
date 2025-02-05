@@ -1,6 +1,8 @@
 #ifdef SK_ANGLE
 
 #include <Windows.h>
+#include <winternl.h>
+#include <D3dkmthk.h>
 #include <jawt_md.h>
 #include "jni_helpers.h"
 #include "exceptions_handler.h"
@@ -21,6 +23,8 @@ class AngleDevice
 public:
     HWND window;
     HDC device;
+    D3DKMT_HANDLE d3dAdapter;
+    D3DDDI_VIDEO_PRESENT_SOURCE_ID d3dVidPnSourceId;
     EGLDisplay display = EGL_NO_DISPLAY;
     EGLContext context = EGL_NO_CONTEXT;
     EGLSurface surface = EGL_NO_SURFACE;
@@ -109,9 +113,20 @@ extern "C"
             angleDevice->display = getAngleEGLDisplay(angleDevice->device);
             if (EGL_NO_DISPLAY == angleDevice->display)
             {
-                throwJavaRenderExceptionWithMessage(env, __FUNCTION__, "Could not get display!");
+                throwAngleException(env, __FUNCTION__, "Could not get display!");
                 return (jlong) 0;
             }
+
+            D3DKMT_OPENADAPTERFROMHDC OpenAdapterData = { angleDevice->device };
+            NTSTATUS status = D3DKMTOpenAdapterFromHdc(&OpenAdapterData);
+            if (NT_ERROR(status))
+            {
+                throwJavaRenderExceptionByErrorCode(env, __FUNCTION__, status);
+                return (jlong) 0;
+            }
+
+            angleDevice->d3dAdapter = OpenAdapterData.hAdapter;
+            angleDevice->d3dVidPnSourceId = OpenAdapterData.VidPnSourceId;
 
             EGLint majorVersion;
             EGLint minorVersion;
@@ -234,12 +249,11 @@ extern "C"
     }
 
     JNIEXPORT void JNICALL Java_org_jetbrains_skiko_redrawer_AngleRedrawerKt_swapBuffers(
-        JNIEnv *env, jobject redrawer, jlong devicePtr, jboolean waitForVsync)
+        JNIEnv *env, jobject redrawer, jlong devicePtr)
     {
         __try
         {
             AngleDevice *angleDevice = fromJavaPointer<AngleDevice *>(devicePtr);
-            eglSwapInterval(angleDevice->display, waitForVsync ? 1 : 0);
             if (!eglSwapBuffers(angleDevice->display, angleDevice->surface))
             {
                 throwJavaRenderExceptionWithMessage(env, __FUNCTION__, "Could not complete eglSwapBuffers.");
@@ -252,12 +266,33 @@ extern "C"
         }
     }
 
+    JNIEXPORT void JNICALL Java_org_jetbrains_skiko_redrawer_AngleRedrawerKt_waitForVerticalBlankEvent(
+        JNIEnv *env, jobject redrawer, jlong devicePtr)
+    {
+        AngleDevice *angleDevice = fromJavaPointer<AngleDevice *>(devicePtr);
+        D3DKMT_WAITFORVERTICALBLANKEVENT WaitForVerticalBlankEventData;
+        WaitForVerticalBlankEventData.hAdapter = angleDevice->d3dAdapter;
+        WaitForVerticalBlankEventData.hDevice = NULL;
+        WaitForVerticalBlankEventData.VidPnSourceId = angleDevice->d3dVidPnSourceId;
+        NTSTATUS status = D3DKMTWaitForVerticalBlankEvent(&WaitForVerticalBlankEventData);
+        if (NT_ERROR(status))
+        {
+            throwJavaRenderExceptionByErrorCode(env, __FUNCTION__, status);
+        }
+    }
+
     JNIEXPORT void JNICALL Java_org_jetbrains_skiko_redrawer_AngleRedrawerKt_disposeDevice(
         JNIEnv *env, jobject redrawer, jlong devicePtr)
     {
         AngleDevice *angleDevice = fromJavaPointer<AngleDevice *>(devicePtr);
         eglMakeCurrent(angleDevice->display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+        D3DKMT_CLOSEADAPTER CloseAdapterData = { angleDevice->d3dAdapter };
+        NTSTATUS status = D3DKMTCloseAdapter(&CloseAdapterData);
         delete angleDevice;
+        if (NT_ERROR(status))
+        {
+            throwJavaRenderExceptionByErrorCode(env, __FUNCTION__, status);
+        }
     }
 } // end extern C
 
