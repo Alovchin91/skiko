@@ -97,10 +97,10 @@ fun SkikoProjectContext.createCompileJvmBindingsTask(
         OS.Windows -> {
             includeHeadersNonRecursive(windowsSdkPaths.includeDirs)
             includeHeadersNonRecursive(jdkHome.resolve("include/win32"))
-            val targetArgs = if (targetArch == Arch.Arm64) arrayOf("--target=arm64-windows") else arrayOf()
+            val targetArgs = if (targetArch == Arch.Arm64) arrayOf("/clang:--target=arm64-windows") else arrayOf()
             osFlags = arrayOf(
                 "/nologo",
-                *buildType.msvcCompilerFlags,
+                *buildType.winCompilerFlags,
                 "/utf-8",
                 "/GR-", // no-RTTI.
                 "/FS", // Due to an error when building in Teamcity. https://docs.microsoft.com/en-us/cpp/build/reference/fs-force-synchronous-pdb-writes
@@ -290,7 +290,7 @@ fun SkikoProjectContext.createLinkJvmBindings(
         OS.Windows -> {
             libDirs.set(windowsSdkPaths.libDirs)
             osFlags = mutableListOf<String>().apply {
-                addAll(buildType.msvcLinkerFlags)
+                addAll(buildType.winLinkerFlags)
                 addAll(
                     arrayOf(
                         // ignore https://learn.microsoft.com/en-us/cpp/error-messages/tool-errors/linker-tools-warning-lnk4217

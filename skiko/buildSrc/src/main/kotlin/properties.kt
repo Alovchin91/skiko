@@ -74,22 +74,27 @@ enum class SkiaBuildType(
     val id: String,
     val flags: Array<String>,
     val clangFlags: Array<String>,
-    val msvcCompilerFlags: Array<String>,
-    val msvcLinkerFlags: Array<String>
+    val winCompilerFlags: Array<String>,
+    val winLinkerFlags: Array<String>
 ) {
+    // TODO consider reusing `clangFlags` and test that it behaves the same or better:
+    //  - different optimisation levels (O3 instead O2 in Release)
+    //    - note that clang-cl's equivalent of -O3 is /Ot, and /O2 includes /Ot
+    //  - different Debug options (note that Skia-pack has trivial ABI currently disabled on Windows)
+    //  - clang-cl frontend might not accept clang flags as-is; might need to prepend them with /clang: option
     DEBUG(
         id = "Debug",
         flags = arrayOf("-DSK_DEBUG"),
         clangFlags = arrayOf("-std=c++17", "-g", "-DSK_TRIVIAL_ABI=[[clang::trivial_abi]]"),
-        msvcCompilerFlags = arrayOf("/Zi", "/std:c++17"),
-        msvcLinkerFlags = arrayOf("/DEBUG"),
+        winCompilerFlags = arrayOf("/Zi", "/std:c++17"),
+        winLinkerFlags = arrayOf("/DEBUG"),
     ),
     RELEASE(
         id = "Release",
         flags = arrayOf("-DNDEBUG"),
         clangFlags = arrayOf("-std=c++17", "-O3"),
-        msvcCompilerFlags = arrayOf("/O2", "/std:c++17"),
-        msvcLinkerFlags = arrayOf("/DEBUG"),
+        winCompilerFlags = arrayOf("/O2", "/std:c++17"),
+        winLinkerFlags = arrayOf("/DEBUG"),
     );
     override fun toString() = id
 }
