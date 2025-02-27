@@ -158,9 +158,6 @@ class SkikoProperties(private val myProject: Project) {
     val releaseGithubCommit: String
         get() = (myProject.property("release.github.commit") as String)
 
-    val visualStudioBuildToolsDir: File?
-        get() = System.getenv()["SKIKO_VSBT_PATH"]?.let { File(it) }?.takeIf { it.isDirectory }
-
     // todo: make compatible with the configuration cache
     val skiaDir: File?
         get() = (System.getenv()["SKIA_DIR"] ?: System.getProperty("skia.dir") ?: myProject.findProperty("skia.dir")

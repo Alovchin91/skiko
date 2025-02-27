@@ -10,15 +10,10 @@ import java.io.File
 import kotlin.math.abs
 
 data class WindowsSdkPaths(
-    val compiler: File,
-    val linker: File,
     val includeDirs: Collection<File>,
     val libDirs: Collection<File>,
-    val toolchainVersion: VersionNumber,
 )
 
-private const val ENV_SKIKO_VSBT_PATH = "SKIKO_VSBT_PATH"
-private const val ENV_SKIKO_VSBT_VERSION = "SKIKO_VSBT_VERSION"
 private const val ENV_SKIKO_WINDOWS_SDK_VERSION = "SKIKO_WINDOWS_SDK_VERSION"
 
 fun findWindowsSdkPaths(gradle: Gradle, arch: Arch): WindowsSdkPaths {
@@ -26,17 +21,13 @@ fun findWindowsSdkPaths(gradle: Gradle, arch: Arch): WindowsSdkPaths {
 
     val hostPlatform = host()
     val finder = GradleWindowsComponentFinderWrapper(gradle, hostPlatform, arch)
-    val visualCpp = finder.findVisualCpp()
     val windowsSdk = finder.findWindowsSdk()
     val ucrt = finder.findUcrt()
     val winrt = finder.findWinrt()
-    val systemLibraries = listOf(visualCpp, windowsSdk, ucrt, winrt)
+    val systemLibraries = listOf(windowsSdk, ucrt, winrt)
     return WindowsSdkPaths(
-        compiler = visualCpp.compilerExecutable.fixPathFor(arch),
-        linker = visualCpp.linkerExecutable.fixPathFor(arch),
         includeDirs = systemLibraries.flatMap { it.includeDirs }.map { it.fixPathFor(arch) },
         libDirs = systemLibraries.flatMap { it.libDirs }.map { it.fixPathFor(arch) },
-        toolchainVersion = visualCpp.implementationVersion,
     )
 }
 
@@ -48,33 +39,6 @@ private class GradleWindowsComponentFinderWrapper(
     private val hostPlatform: NativePlatformInternal,
     private val arch: Arch,
 ) {
-    fun findVisualCpp(): VisualCpp {
-        val skikoVsbtPath = System.getenv(ENV_SKIKO_VSBT_PATH)
-
-        val vsLocator = gradle.serviceOf<VisualStudioLocator>()
-        val vsComponent = if (skikoVsbtPath != null) {
-            val vsbtDir = File(skikoVsbtPath)
-            check(vsbtDir.isDirectory) {
-                "Environment variable '$ENV_SKIKO_VSBT_PATH' points to non-existing directory: '$skikoVsbtPath'\n" +
-                        "Please set it to existing Visual Studio Build Tools installation"
-            }
-            val searchResult = vsLocator.locateComponent(vsbtDir)
-            if (!searchResult.isAvailable)
-                error("Could not find valid Visual Studio Build Tools installation " +
-                        "at the location specified by '$ENV_SKIKO_VSBT_PATH': $skikoVsbtPath"
-                )
-            else searchResult.component
-        } else {
-            vsLocator.locateAllComponents().chooseComponentByPreferredVersion(
-                componentType = "VS Build Tools",
-                preferredVersionEnvVar = ENV_SKIKO_VSBT_VERSION
-            )
-        }
-
-        return vsComponent.visualCpp.forPlatform(hostPlatform)
-            ?: error("Visual Studio location component for host platform '$hostPlatform' is null")
-    }
-
     fun findWindowsSdk(): SystemLibraries {
         val windowsSdkLocator = gradle.serviceOf<WindowsSdkLocator>()
         val windowsSdkComponent = windowsSdkLocator.locateAllComponents()
