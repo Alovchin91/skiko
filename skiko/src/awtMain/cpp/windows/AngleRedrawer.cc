@@ -103,6 +103,19 @@ extern "C"
                 enableTransparentWindow(hwnd);
             }
 
+            PIXELFORMATDESCRIPTOR pixFormatDscr;
+            memset(&pixFormatDscr, 0, sizeof(PIXELFORMATDESCRIPTOR));
+            pixFormatDscr.nSize = sizeof(PIXELFORMATDESCRIPTOR);
+            pixFormatDscr.nVersion = 1;
+            pixFormatDscr.dwFlags = PFD_DRAW_TO_WINDOW | PFD_DOUBLEBUFFER | PFD_SUPPORT_COMPOSITION;
+
+            pixFormatDscr.iPixelType = PFD_TYPE_RGBA;
+            pixFormatDscr.cColorBits = 32;
+            pixFormatDscr.cAlphaBits = 8;
+            int iPixelFormat = ChoosePixelFormat(hdc, &pixFormatDscr);
+            SetPixelFormat(hdc, iPixelFormat, &pixFormatDscr);
+            DescribePixelFormat(hdc, iPixelFormat, sizeof(PIXELFORMATDESCRIPTOR), &pixFormatDscr);
+
             AngleDevice *angleDevice = new AngleDevice();
             angleDevice->window = hwnd;
             angleDevice->device = hdc;
