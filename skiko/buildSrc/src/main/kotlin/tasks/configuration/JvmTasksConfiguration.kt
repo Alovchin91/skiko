@@ -301,6 +301,14 @@ fun SkikoProjectContext.createLinkJvmBindings(
                         "/ignore:4217"
                     )
                 )
+                // workaround for VS Build Tools 2022 (17.2+) change
+                // https://developercommunity.visualstudio.com/t/-imp-std-init-once-complete-unresolved-external-sy/1684365#T-N10041864
+                addAll(
+                    arrayOf(
+                        "/ALTERNATENAME:__imp___std_init_once_begin_initialize=__imp_InitOnceBeginInitialize",
+                        "/ALTERNATENAME:__imp___std_init_once_complete=__imp_InitOnceComplete"
+                    )
+                )
                 addAll(
                     arrayOf(
                         "/NOLOGO",
